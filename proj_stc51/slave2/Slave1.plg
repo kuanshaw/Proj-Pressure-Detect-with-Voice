@@ -1,0 +1,33 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Project:</h2>
+C:\Users\13002\Desktop\NRF24L01Ä£¿é.265\NRF24L01Ä£¿é\slave2\slave.uvproj
+Project File Date:  05/03/2019
+
+<h2>Output:</h2>
+Build target 'Target 1'
+compiling NRF24L01.c...
+Allhead.h(12): warning C318: can't open file 'MAX232.h'
+linking...
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?NRFSETRXMODE?NRF24L01
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_NRFREVDATE?NRF24L01
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_DDELAY?DELAY
+Program Size: data=102.1 xdata=0 code=2492
+creating hex file from "Slave2"...
+"Slave2" - 0 Error(s), 4 Warning(s).
+Build target 'Target 1'
+linking...
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?NRFSETRXMODE?NRF24L01
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_NRFREVDATE?NRF24L01
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_DDELAY?DELAY
+Program Size: data=102.1 xdata=0 code=2492
+creating hex file from "Slave2"...
+"Slave2" - 0 Error(s), 3 Warning(s).

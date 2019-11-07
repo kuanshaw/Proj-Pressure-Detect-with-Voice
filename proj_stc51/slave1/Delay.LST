@@ -1,0 +1,45 @@
+C51 COMPILER V9.52.0.0   DELAY                                                             05/04/2019 09:03:18 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE DELAY
+OBJECT MODULE PLACED IN Delay.OBJ
+COMPILER INVOKED BY: C:\Keil_v4\C51\BIN\C51.EXE Delay.c BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include"reg52.h"
+   2          #include"Allhead.h"
+*** WARNING C318 IN LINE 12 OF Allhead.h: can't open file 'MAX232.h'
+   3          /***************************延时函数****************/
+   4          void Delay(unint t)
+   5          {
+   6   1        unint x,y;
+   7   1        for(x=t;x>0;x--)
+   8   1         for(y=110;y>0;y--);
+   9   1      }
+  10          /**********************************************
+  11             DS18B20专用延时子函数
+  12          **********************************************/
+  13          void DDelay(unint t) 
+  14          { 
+  15   1        unint n;
+  16   1        n=0; 
+  17   1        while(n<t) 
+  18   1        {
+  19   2          n++;
+  20   2        } 
+  21   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     48    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,288 @@
+C51 COMPILER V9.52.0.0   NRF24L01                                                          05/05/2019 13:19:41 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE NRF24L01
+OBJECT MODULE PLACED IN NRF24L01.OBJ
+COMPILER INVOKED BY: C:\Keil_v4\C51\BIN\C51.EXE NRF24L01.c BROWSE INCDIR(..\NRF24L01¶à½Úµã½ÓÊÕ) DEBUG OBJECTEXTEND TABS(
+                    -2)
+
+line level    source
+
+   1          #include"reg52.h"
+   2          #include"Allhead.h"
+   3          
+   4          sbit CE  = P1^0;
+   5          sbit CSN = P1^1;
+   6          sbit SCLK= P1^2;
+   7          sbit MOSI= P1^3;
+   8          sbit MISO= P1^4;
+   9          sbit IRQ = P1^5;
+  10          
+  11          unchar RevTempDate0[5];   //Í¬µÀ0½ÓÊÕÊý¾Ý
+  12          unchar RevTempDate1[5];   //Í¬µÀ1½ÓÊÕÊý¾Ý
+  13          
+  14          unchar code RxAddr0[]={0x34,0x43,0x10,0x10,0x01};   //±àºÅ3½ÓÊÕµØÖ·Õâ¸öµØÖ·ºÍ·¢ËÍ·½µØÖ·Ò»Ñù!
+  15          unchar code RxAddr1[]={0xc2,0xc2,0xc2,0xc2,0xc1};   //±àºÅ2
+  16          
+  17          
+  18          /*****************×´Ì¬±êÖ¾*****************************************/
+  19          unchar  bdata sta;   //×´Ì¬±êÖ¾
+  20          sbit RX_DR=sta^6;
+  21          sbit TX_DS=sta^5;
+  22          sbit MAX_RT=sta^4;
+  23          
+  24          
+  25          /*****************SPIÊ±Ðòº¯Êý******************************************/
+  26          unchar NRFSPI(unchar date)
+  27          {
+  28   1          unchar i;
+  29   1          for(i=0;i<8;i++)          // Ñ­»·8´Î
+  30   1          {
+  31   2          if(date&0x80)
+  32   2            MOSI=1;
+  33   2          else
+  34   2            MOSI=0;   // byte×î¸ßÎ»Êä³öµ½MOSI
+  35   2            date<<=1;             // µÍÒ»Î»ÒÆÎ»µ½×î¸ßÎ»
+  36   2            SCLK=1; 
+  37   2          if(MISO)               // À­¸ßSCK£¬nRF24L01´ÓMOSI¶ÁÈë1Î»Êý¾Ý£¬Í¬Ê±´ÓMISOÊä³ö1Î»Êý¾Ý
+  38   2              date|=0x01;         // ¶ÁMISOµ½byte×îµÍÎ»
+  39   2            SCLK=0;             // SCKÖÃµÍ
+  40   2          }
+  41   1          return(date);             // ·µ»Ø¶Á³öµÄÒ»×Ö½Ú
+  42   1      }
+  43          
+  44          
+  45          /**********************NRF24L01³õÊ¼»¯º¯Êý*******************************/
+  46          void NRF24L01Int()
+  47          {
+  48   1        NRFDelay(2);//ÈÃÏµÍ³Ê²Ã´¶¼²»¸É
+  49   1        CE=0;
+  50   1        CSN=1;  
+  51   1        SCLK=0;
+  52   1        IRQ=1; 
+  53   1      }
+  54          
+C51 COMPILER V9.52.0.0   NRF24L01                                                          05/05/2019 13:19:41 PAGE 2   
+
+  55          
+  56          /*****************SPI¶Á¼Ä´æÆ÷Ò»×Ö½Úº¯Êý*********************************/
+  57          unchar NRFReadReg(unchar RegAddr)
+  58          {
+  59   1         unchar BackDate;
+  60   1         CSN=0;//Æô¶¯Ê±Ðò
+  61   1         NRFSPI(RegAddr);//Ð´¼Ä´æÆ÷µØÖ·
+  62   1         BackDate=NRFSPI(0x00);//Ð´Èë¶Á¼Ä´æÆ÷Ö¸Áî  
+  63   1         CSN=1;
+  64   1         return(BackDate); //·µ»Ø×´Ì¬
+  65   1      }
+  66          
+  67          
+  68          /*****************SPIÐ´¼Ä´æÆ÷Ò»×Ö½Úº¯Êý*********************************/
+  69          unchar NRFWriteReg(unchar RegAddr,unchar date)
+  70          {
+  71   1         unchar BackDate;
+  72   1         CSN=0;//Æô¶¯Ê±Ðò
+  73   1         BackDate=NRFSPI(RegAddr);//Ð´ÈëµØÖ·
+  74   1         NRFSPI(date);//Ð´ÈëÖµ
+  75   1         CSN=1;  
+  76   1         return(BackDate);
+  77   1      }
+  78          
+  79          
+  80          /*****************SPI¶ÁÈ¡RXFIFO¼Ä´æÆ÷µÄÖµ********************************/
+  81          unchar NRFReadRxDate(unchar RegAddr,unchar *RxDate,unchar DateLen)
+  82          {  //¼Ä´æÆ÷µØÖ·//¶ÁÈ¡Êý¾Ý´æ·Å±äÁ¿//¶ÁÈ¡Êý¾Ý³¤¶È//ÓÃÓÚ½ÓÊÕ
+  83   1        unchar BackDate,i;
+  84   1        CSN=0;//Æô¶¯Ê±Ðò
+  85   1        BackDate=NRFSPI(RegAddr);//Ð´ÈëÒª¶ÁÈ¡µÄ¼Ä´æÆ÷µØÖ·
+  86   1        for(i=0;i<DateLen;i++) //¶ÁÈ¡Êý¾Ý
+  87   1        {
+  88   2          RxDate[i]=NRFSPI(0);
+  89   2        } 
+  90   1        CSN=1;
+  91   1        return(BackDate); 
+  92   1      }
+  93          
+  94          
+  95          /*****************SPIÐ´ÈëTXFIFO¼Ä´æÆ÷µÄÖµ**********************************/
+  96          unchar NRFWriteTxDate(unchar RegAddr,unchar *TxDate,unchar DateLen)
+  97          { //¼Ä´æÆ÷µØÖ·//Ð´ÈëÊý¾Ý´æ·Å±äÁ¿//¶ÁÈ¡Êý¾Ý³¤¶È//ÓÃÓÚ·¢ËÍ
+  98   1         unchar BackDate,i;
+  99   1         CSN=0;
+ 100   1         BackDate=NRFSPI(RegAddr);//Ð´ÈëÒªÐ´Èë¼Ä´æÆ÷µÄµØÖ·
+ 101   1         for(i=0;i<DateLen;i++)//Ð´ÈëÊý¾Ý
+ 102   1         {
+ 103   2            NRFSPI(*TxDate++);
+ 104   2         }   
+ 105   1         CSN=1;
+ 106   1         return(BackDate);
+ 107   1      }
+ 108          
+ 109          
+ 110          /*****************NRFÉèÖÃÎª·¢ËÍÄ£Ê½²¢·¢ËÍÊý¾Ý******************************/
+ 111          void NRFSetTxMode(unchar *TxDate)
+ 112          {  //·¢ËÍÄ£Ê½ 
+ 113   1        CE=0;   
+ 114   1        NRFWriteTxDate(W_REGISTER+TX_ADDR,RxAddr0,TX_ADDR_WITDH);//Ð´¼Ä´æÆ÷Ö¸Áî+P0µØÖ·Ê¹ÄÜÖ¸Áî+·¢ËÍµØÖ·+µØÖ·¿í¶È
+ 115   1        NRFWriteTxDate(W_TX_PAYLOAD,TxDate,TX_DATA_WITDH);//Ð´ÈëÊý¾Ý 
+ 116   1        /******ÏÂÃæÓÐ¹Ø¼Ä´æÆ÷ÅäÖÃ**************/
+C51 COMPILER V9.52.0.0   NRF24L01                                                          05/05/2019 13:19:41 PAGE 3   
+
+ 117   1        NRFWriteReg(W_REGISTER+EN_AA,0x01);       // Ê¹ÄÜ½ÓÊÕÍ¨µÀ0×Ô¶¯Ó¦´ð
+ 118   1        NRFWriteReg(W_REGISTER+EN_RXADDR,0x01);   // Ê¹ÄÜ½ÓÊÕÍ¨µÀ0
+ 119   1        NRFWriteReg(W_REGISTER+SETUP_RETR,0x0a);  // ×Ô¶¯ÖØ·¢ÑÓÊ±µÈ´ý250us+86us£¬×Ô¶¯ÖØ·¢10´Î
+ 120   1        NRFWriteReg(W_REGISTER+RF_CH,0x40);         // Ñ¡ÔñÉäÆµÍ¨µÀ0x40
+ 121   1        NRFWriteReg(W_REGISTER+RF_SETUP,0x07);    // Êý¾Ý´«ÊäÂÊ1Mbps£¬·¢Éä¹¦ÂÊ0dBm£¬µÍÔëÉù·Å´óÆ÷ÔöÒæ
+ 122   1        NRFWriteReg(W_REGISTER+CONFIG,0x0e);      // CRCÊ¹ÄÜ£¬16Î»CRCÐ£Ñé£¬ÉÏµç 
+ 123   1        CE=1; 
+ 124   1        NRFDelay(5);//±£³Ö10usÃëÒÔÉÏ
+ 125   1      } 
+ 126          
+ 127          
+ 128          /*****************NRFÉèÖÃÎª½ÓÊÕÄ£Ê½²¢½ÓÊÕÊý¾Ý******************************/
+ 129          //½ÓÊÕÄ£Ê½
+ 130          void NRFSetRXMode()
+ 131          {
+ 132   1        CE=0;
+ 133   1        NRFWriteTxDate(W_REGISTER+RX_ADDR_P0,RxAddr0,TX_ADDR_WITDH);  // ½ÓÊÕÉè±¸½ÓÊÕÍ¨µÀ0Ê¹ÓÃºÍ·¢ËÍÉè±¸ÏàÍ¬µÄ·¢Ë
+             -ÍµØÖ·
+ 134   1        NRFWriteTxDate(W_REGISTER+RX_ADDR_P1,RxAddr1,TX_ADDR_WITDH);  // ½ÓÊÕÉè±¸½ÓÊÕÍ¨µÀ1Ê¹ÓÃºÍ·¢ËÍÉè±¸ÏàÍ¬µÄ·¢Ë
+             -ÍµØÖ·
+ 135   1      
+ 136   1        NRFWriteReg(W_REGISTER+EN_AA,0x03);               // Ê¹ÄÜÊý¾ÝÍ¨µÀ0ºÍ1×Ô¶¯Ó¦´ð
+ 137   1        NRFWriteReg(W_REGISTER+EN_RXADDR,0x03);           // Ê¹ÄÜ½ÓÊÕÍ¨µÀ0ºÍ1
+ 138   1      
+ 139   1        NRFWriteReg(W_REGISTER+RX_PW_P0,TX_DATA_WITDH);  // ½ÓÊÕÍ¨µÀ0Ñ¡ÔñºÍ·¢ËÍÍ¨µÀÏàÍ¬ÓÐÐ§Êý¾Ý¿í¶È
+ 140   1        NRFWriteReg(W_REGISTER+RX_PW_P1,TX_DATA_WITDH);  // ½ÓÊÕÍ¨µÀ1Ñ¡ÔñºÍ·¢ËÍÍ¨µÀÏàÍ¬ÓÐÐ§Êý¾Ý¿í¶È
+ 141   1      
+ 142   1        NRFWriteReg(W_REGISTER+RF_CH,0x40);// Ñ¡ÔñÉäÆµÍ¨µÀ0x40 
+ 143   1        NRFWriteReg(W_REGISTER+RF_SETUP,0x07);            // Êý¾Ý´«ÊäÂÊ1Mbps£¬·¢Éä¹¦ÂÊ0dBm£¬µÍÔëÉù·Å´óÆ÷ÔöÒæ
+ 144   1        NRFWriteReg(W_REGISTER+CONFIG,0x0f);             // CRCÊ¹ÄÜ£¬16Î»CRCÐ£Ñé£¬ÉÏµç£¬½ÓÊÕÄ£Ê½     
+ 145   1        CE = 1; 
+ 146   1        NRFDelay(5);    
+ 147   1      }
+ 148          
+ 149          
+ 150          /****************************¼ì²âÊÇ·ñÓÐ½ÓÊÕµ½Êý¾Ý******************************/
+ 151          void CheckACK()
+ 152          {  //ÓÃÓÚ·¢ÉäÄ£Ê½½ÓÊÕÓ¦´ðÐÅºÅ
+ 153   1        sta=NRFReadReg(R_REGISTER+STATUS);                    // ·µ»Ø×´Ì¬¼Ä´æÆ÷
+ 154   1        if(TX_DS)
+ 155   1        NRFWriteReg(W_REGISTER+STATUS,0xff);  // Çå³ýTX_DS»òMAX_RTÖÐ¶Ï±êÖ¾
+ 156   1        }
+ 157          
+ 158          
+ 159          /*************************½ÓÊÕÊý¾Ý*********************************************/
+ 160          
+ 161          unchar overtime_counter_1=0, overtime_counter_2=0;
+ 162          
+ 163          void GetDate()         
+ 164          {
+ 165   1        unchar RX_P_NO;//½ÓÊÕÍ¨µÀºÅ
+ 166   1        sta=NRFReadReg(R_REGISTER+STATUS);//·¢ËÍÊý¾Ýºó¶ÁÈ¡×´Ì¬¼Ä´æÆ÷
+ 167   1        
+ 168   1        if(RX_DR)       // ÅÐ¶ÏÊÇ·ñ½ÓÊÕµ½Êý¾Ý
+ 169   1        {
+ 170   2          RX_P_NO = sta&0x0e;//»ñÈ¡Í¨µÀºÅ
+ 171   2          CE=0;//´ý»ú
+ 172   2          switch(RX_P_NO)
+ 173   2          {
+ 174   3            case 0x00:
+ 175   3              NRFReadRxDate(R_RX_PAYLOAD,RevTempDate0,RX_DATA_WITDH);
+ 176   3              overtime_counter_1 = 0;
+C51 COMPILER V9.52.0.0   NRF24L01                                                          05/05/2019 13:19:41 PAGE 4   
+
+ 177   3              overtime_counter_2++;
+ 178   3              break;// ´ÓRXFIFO¶ÁÈ¡Êý¾ÝÍ¨µÀ0
+ 179   3            
+ 180   3            case 0x02:
+ 181   3              NRFReadRxDate(R_RX_PAYLOAD,RevTempDate1,RX_DATA_WITDH);
+ 182   3              overtime_counter_2 = 0;
+ 183   3              overtime_counter_1++;
+ 184   3              break;// ´ÓRXFIFO¶ÁÈ¡Êý¾ÝÍ¨µÀ1
+ 185   3            
+ 186   3            default:
+ 187   3              overtime_counter_1++;
+ 188   3              overtime_counter_2++;
+ 189   3              break;
+ 190   3          }
+ 191   2      
+ 192   2          // LCDÏÔÊ¾×óÓÒÌ¥Ñ¹
+ 193   2          SetXY(1,0);
+ 194   2          LCDWriteDate(RevTempDate0[0]);
+ 195   2          LCDWriteDate(RevTempDate0[1]);
+ 196   2          LCDWriteDate(RevTempDate0[2]);
+ 197   2          LCDWriteDate('.');
+ 198   2          LCDWriteDate(RevTempDate0[3]);
+ 199   2          LCDWriteDate(RevTempDate0[4]);
+ 200   2          
+ 201   2          SetXY(1,9);
+ 202   2          LCDWriteDate(RevTempDate1[0]);
+ 203   2          LCDWriteDate(RevTempDate1[1]);
+ 204   2          LCDWriteDate(RevTempDate1[2]);
+ 205   2          LCDWriteDate('.');
+ 206   2          LCDWriteDate(RevTempDate1[3]);
+ 207   2          LCDWriteDate(RevTempDate1[4]);
+ 208   2          
+ 209   2          NRFWriteReg(W_REGISTER+STATUS, 0xff); //½ÓÊÕµ½Êý¾ÝºóRX_DR,TX_DS,MAX_PT¶¼ÖÃ¸ßÎª1£¬Í¨¹ýÐ´1À´Çå³þÖÐ¶Ï±ê
+ 210   2          CSN=0;
+ 211   2          NRFSPI(FLUSH_RX);//ÓÃÓÚÇå¿ÕFIFO £¡£¡¹Ø¼ü£¡£¡²»È»»á³öÏÖÒâÏë²»µ½µÄºó¹û£¡£¡£¡´ó¼Ò¼Ç×¡£¡£¡ 
+ 212   2          CSN=1;
+ 213   2        } 
+ 214   1        else{
+ 215   2          overtime_counter_1++;
+ 216   2          overtime_counter_2++;
+ 217   2        }
+ 218   1        
+ 219   1        
+ 220   1        // ÉèÖÃ³¬Ê±Çå¿ÕÊý×é£¬³¬Ê±Ê±¼äÔÚºê¶¨ÒåÖÐÉèÖÃ
+ 221   1        if(overtime_counter_1 >= NRF_OVERTIME){
+ 222   2          overtime_counter_1 = 0;
+ 223   2          RevTempDate0[0] = '-';
+ 224   2          RevTempDate0[1] = '-';
+ 225   2          RevTempDate0[2] = '-';
+ 226   2          RevTempDate0[3] = '-';
+ 227   2          RevTempDate0[4] = '-';
+ 228   2          
+ 229   2          SetXY(1,0);
+ 230   2          LCDWriteDate(RevTempDate0[0]);
+ 231   2          LCDWriteDate(RevTempDate0[1]);
+ 232   2          LCDWriteDate(RevTempDate0[2]);
+ 233   2          LCDWriteDate('.');
+ 234   2          LCDWriteDate(RevTempDate0[3]);
+ 235   2          LCDWriteDate(RevTempDate0[4]);
+ 236   2        }
+ 237   1        if(overtime_counter_2 >= NRF_OVERTIME){
+ 238   2          overtime_counter_2 = 0;
+C51 COMPILER V9.52.0.0   NRF24L01                                                          05/05/2019 13:19:41 PAGE 5   
+
+ 239   2          RevTempDate1[0] = '-';
+ 240   2          RevTempDate1[1] = '-';
+ 241   2          RevTempDate1[2] = '-';
+ 242   2          RevTempDate1[3] = '-';
+ 243   2          RevTempDate1[4] = '-';
+ 244   2          
+ 245   2          SetXY(1,9);
+ 246   2          LCDWriteDate(RevTempDate1[0]);
+ 247   2          LCDWriteDate(RevTempDate1[1]);
+ 248   2          LCDWriteDate(RevTempDate1[2]);
+ 249   2          LCDWriteDate('.');
+ 250   2          LCDWriteDate(RevTempDate1[3]);
+ 251   2          LCDWriteDate(RevTempDate1[4]);
+ 252   2        }
+ 253   1        
+ 254   1      } 
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    635    ----
+   CONSTANT SIZE    =     10    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     13      13
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

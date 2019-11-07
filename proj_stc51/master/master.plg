@@ -1,0 +1,18 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Project:</h2>
+D:\Weiyun\160 - Yn - Ì¥Ñ¹¼à²â\01 ³ÌÐò\mea_pressure\master\master.uvproj
+Project File Date:  05/03/2019
+
+<h2>Output:</h2>
+Build target 'Target 1'
+linking...
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_NRFSETTXMODE?NRF24L01
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?CHECKACK?NRF24L01
+Program Size: data=110.0 xdata=0 code=2059
+creating hex file from "master"...
+"master" - 0 Error(s), 2 Warning(s).

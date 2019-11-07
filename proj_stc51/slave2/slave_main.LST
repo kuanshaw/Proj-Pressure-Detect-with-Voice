@@ -1,0 +1,366 @@
+C51 COMPILER V9.52.0.0   SLAVE_MAIN                                                        05/05/2019 12:53:44 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE SLAVE_MAIN
+OBJECT MODULE PLACED IN slave_main.OBJ
+COMPILER INVOKED BY: C:\Keil_v4\C51\BIN\C51.EXE slave_main.c BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include "reg52.h"
+   2          #include "Allhead.h"
+*** WARNING C318 IN LINE 12 OF Allhead.h: can't open file 'MAX232.h'
+   3          #include  <INTRINS.H> //Keil library  
+   4          #define   uchar unsigned char
+   5          #define   uint unsigned int 
+   6          
+   7          
+   8          #define BMP085_SlaveAddress   0xee    //定义器件在IIC总线中的从地址                               
+   9          
+  10          #define OSS 0 // Oversampling Setting (note: code is not set up to use other OSS values)
+  11                           
+  12          typedef unsigned char  BYTE;
+  13          typedef unsigned short WORD;
+  14          
+  15          
+  16          sbit    SCL=P3^3;      //IIC时钟引脚定义
+  17          sbit    SDA=P3^2;      //IIC数据引脚定义
+  18          
+  19              
+  20          uchar ge,shi,bai,qian,wan,shiwan;           //显示变量
+  21          int  dis_data;                              //变量
+  22          uchar TxDate[5];
+  23          
+  24          short ac1;
+  25          short ac2; 
+  26          short ac3; 
+  27          unsigned short ac4;
+  28          unsigned short ac5;
+  29          unsigned short ac6;
+  30          short b1; 
+  31          short b2;
+  32          short mb;
+  33          short mc;
+  34          short md;
+  35          typedef bit BOOL  ; 
+  36          uchar data_byte;
+  37          
+  38          
+  39          void conversion(long temp_data);
+  40          uchar Single_Read(uchar REG_Address);                                      //单个读取内部寄存器数据
+  41          bit  BMP085_RecvACK();
+  42          BYTE BMP085_RecvByte();
+  43          
+  44          
+  45          
+  46          
+  47          //*********************************************************
+  48          void conversion(long temp_data)  
+  49          {  
+  50   1          
+  51   1          shiwan=temp_data/100000+0x30 ;
+  52   1          temp_data=temp_data%100000;   //取余运算 
+  53   1          wan=temp_data/10000+0x30 ;
+  54   1          temp_data=temp_data%10000;   //取余运算
+C51 COMPILER V9.52.0.0   SLAVE_MAIN                                                        05/05/2019 12:53:44 PAGE 2   
+
+  55   1        qian=temp_data/1000+0x30 ;
+  56   1          temp_data=temp_data%1000;    //取余运算
+  57   1          bai=temp_data/100+0x30   ;
+  58   1          temp_data=temp_data%100;     //取余运算
+  59   1          shi=temp_data/10+0x30    ;
+  60   1          temp_data=temp_data%10;      //取余运算
+  61   1          ge=temp_data+0x30;  
+  62   1      }
+  63          
+  64          
+  65          /**************************************
+  66          延时5微秒(STC90C52RC@12M)
+  67          不同的工作环境,需要调整此函数，注意时钟过快时需要修改
+  68          当改用1T的MCU时,请调整此延时函数
+  69          **************************************/
+  70          void Delay5us()
+  71          {
+  72   1          _nop_();_nop_();_nop_();_nop_();
+  73   1          _nop_();_nop_();_nop_();_nop_();
+  74   1        _nop_();_nop_();_nop_();_nop_();
+  75   1        _nop_();_nop_();_nop_();_nop_();
+  76   1      }
+  77          
+  78          /**************************************
+  79          延时5毫秒(STC90C52RC@12M)
+  80          不同的工作环境,需要调整此函数
+  81          当改用1T的MCU时,请调整此延时函数
+  82          **************************************/
+  83          void Delay5ms()
+  84          {
+  85   1          WORD n = 560;
+  86   1      
+  87   1          while (n--);
+  88   1      }
+  89          
+  90          /**************************************
+  91          起始信号
+  92          **************************************/
+  93          void BMP085_Start()
+  94          {
+  95   1          SDA = 1;                    //拉高数据线
+  96   1          SCL = 1;                    //拉高时钟线
+  97   1          Delay5us();                 //延时
+  98   1          SDA = 0;                    //产生下降沿
+  99   1          Delay5us();                 //延时
+ 100   1          SCL = 0;                    //拉低时钟线
+ 101   1      }
+ 102          
+ 103          /**************************************
+ 104          停止信号
+ 105          **************************************/
+ 106          void BMP085_Stop()
+ 107          {
+ 108   1          SDA = 0;                    //拉低数据线
+ 109   1          SCL = 1;                    //拉高时钟线
+ 110   1          Delay5us();                 //延时
+ 111   1          Delay5us();                 //延时
+ 112   1      }
+ 113          
+ 114          /**************************************
+ 115          发送应答信号
+ 116          入口参数:ack (0:ACK 1:NAK)
+C51 COMPILER V9.52.0.0   SLAVE_MAIN                                                        05/05/2019 12:53:44 PAGE 3   
+
+ 117          **************************************/
+ 118          void BMP085_SendACK(bit ack)
+ 119          {
+ 120   1          SDA = ack;                  //写应答信号
+ 121   1          SCL = 1;                    //拉高时钟线
+ 122   1          Delay5us();                 //延时
+ 123   1          SCL = 0;                    //拉低时钟线
+ 124   1          Delay5us();                 //延时
+ 125   1      }
+ 126          
+ 127          /**************************************
+ 128          接收应答信号
+ 129          **************************************/
+ 130          bit BMP085_RecvACK()
+ 131          {
+ 132   1          SCL = 1;                    //拉高时钟线
+ 133   1          Delay5us();                 //延时
+ 134   1          CY = SDA;                   //读应答信号
+ 135   1          SCL = 0;                    //拉低时钟线
+ 136   1          Delay5us();                 //延时
+ 137   1      
+ 138   1          return CY;
+ 139   1      }
+ 140          
+ 141          /**************************************
+ 142          向IIC总线发送一个字节数据
+ 143          **************************************/
+ 144          void BMP085_SendByte(BYTE dat)
+ 145          {
+ 146   1          BYTE i;
+ 147   1      
+ 148   1          for (i=0; i<8; i++)         //8位计数器
+ 149   1          {
+ 150   2              dat <<= 1;              //移出数据的最高位
+ 151   2              SDA = CY;               //送数据口
+ 152   2              SCL = 1;                //拉高时钟线
+ 153   2              Delay5us();             //延时
+ 154   2              SCL = 0;                //拉低时钟线
+ 155   2              Delay5us();             //延时
+ 156   2          }
+ 157   1          BMP085_RecvACK();
+ 158   1      }
+ 159          
+ 160          /**************************************
+ 161          从IIC总线接收一个字节数据
+ 162          **************************************/
+ 163          BYTE BMP085_RecvByte()
+ 164          {
+ 165   1          BYTE i;
+ 166   1          BYTE dat = 0;
+ 167   1      
+ 168   1          SDA = 1;                    //使能内部上拉,准备读取数据,
+ 169   1          for (i=0; i<8; i++)         //8位计数器
+ 170   1          {
+ 171   2              dat <<= 1;
+ 172   2              SCL = 1;                //拉高时钟线
+ 173   2              Delay5us();             //延时
+ 174   2              dat |= SDA;             //读数据               
+ 175   2              SCL = 0;                //拉低时钟线
+ 176   2              Delay5us();             //延时
+ 177   2          }
+ 178   1          return dat;
+C51 COMPILER V9.52.0.0   SLAVE_MAIN                                                        05/05/2019 12:53:44 PAGE 4   
+
+ 179   1      }
+ 180          
+ 181          //*********************************************************
+ 182          //读出BMP085内部数据,连续两个
+ 183          //*********************************************************
+ 184          short Multiple_read(uchar ST_Address)
+ 185          {   
+ 186   1        uchar msb, lsb;
+ 187   1        short _data;
+ 188   1          msb = BMP085_RecvByte();                 //BUF[0]存储
+ 189   1          BMP085_SendACK(0);                       //回应ACK
+ 190   1          lsb = BMP085_RecvByte();     
+ 191   1        BMP085_SendACK(1);                       //最后一个数据需要回NOACK
+ 192   1      
+ 193   1          BMP085_Stop();                           //停止信号
+ 194   1          Delay5ms();
+ 195   1          _data = msb << 8;
+ 196   1        _data |= lsb; 
+ 197   1        return _data;
+ 198   1      }
+*** WARNING C280 IN LINE 184 OF slave_main.c: 'ST_Address': unreferenced local variable
+ 199          //********************************************************************
+ 200          long bmp085ReadTemp(void)
+ 201          {
+ 202   1      
+ 203   1          BMP085_Start();                  //起始信号
+ 204   1          BMP085_SendByte(BMP085_SlaveAddress);   //发送设备地址+写信号
+ 205   1          BMP085_SendByte(0xF4);            // write register address
+ 206   1          BMP085_SendByte(0x2E);        // write register data for temp
+ 207   1          BMP085_Stop();                   //发送停止信号
+ 208   1        Delay(10);  // max time is 4.5ms
+ 209   1        
+ 210   1        return (long) Multiple_read(0xF6);
+ 211   1      }
+ 212          //*************************************************************
+ 213          long bmp085ReadPressure(void)
+ 214          {
+ 215   1        long pressure = 0;
+ 216   1      
+ 217   1          BMP085_Start();                   //起始信号
+ 218   1          BMP085_SendByte(BMP085_SlaveAddress);   //发送设备地址+写信号
+ 219   1          BMP085_SendByte(0xF4);            // write register address
+ 220   1          BMP085_SendByte(0x34);          // write register data for pressure
+ 221   1          BMP085_Stop();                    //发送停止信号
+ 222   1        Delay(10);                        // max time is 4.5ms
+ 223   1        
+ 224   1        pressure = Multiple_read(0xF6);
+ 225   1        pressure &= 0x0000FFFF;
+ 226   1        
+ 227   1        return pressure;  
+ 228   1        //return (long) bmp085ReadShort(0xF6);
+ 229   1      }
+ 230          
+ 231          //**************************************************************
+ 232          
+ 233          //初始化BMP085，根据需要请参考pdf进行修改**************
+ 234          void Init_BMP085()
+ 235          {
+ 236   1        ac1 = Multiple_read(0xAA);
+ 237   1        ac2 = Multiple_read(0xAC);
+ 238   1        ac3 = Multiple_read(0xAE);
+ 239   1        ac4 = Multiple_read(0xB0);
+C51 COMPILER V9.52.0.0   SLAVE_MAIN                                                        05/05/2019 12:53:44 PAGE 5   
+
+ 240   1        ac5 = Multiple_read(0xB2);
+ 241   1        ac6 = Multiple_read(0xB4);
+ 242   1        b1 =  Multiple_read(0xB6);
+ 243   1        b2 =  Multiple_read(0xB8);
+ 244   1        mb =  Multiple_read(0xBA);
+ 245   1        mc =  Multiple_read(0xBC);
+ 246   1        md =  Multiple_read(0xBE);
+ 247   1      }
+ 248          
+ 249          //***********************************************************************
+ 250          void bmp085Convert()
+ 251          {
+ 252   1        long ut;
+ 253   1        long up;
+ 254   1        long x1, x2, b5, b6, x3, b3, p;
+ 255   1        unsigned long b4, b7;
+ 256   1        long  temperature;
+ 257   1        long  pressure;
+ 258   1      
+ 259   1        ut = bmp085ReadTemp();
+ 260   1        ut = bmp085ReadTemp();     // 读取温度
+ 261   1        up = bmp085ReadPressure();
+ 262   1        up = bmp085ReadPressure();  // 读取压强
+ 263   1      
+ 264   1        x1 = ((long)ut - ac6) * ac5 >> 15;
+ 265   1        x2 = ((long) mc << 11) / (x1 + md);
+ 266   1        b5 = x1 + x2;
+ 267   1        temperature = (b5 + 8) >> 4;
+ 268   1      
+ 269   1        //*************
+ 270   1      
+ 271   1        conversion(temperature);
+ 272   1      
+ 273   1      //  TxDate[0]=bai;       
+ 274   1      //  TxDate[1]=shi; 
+ 275   1      //  TxDate[2]=ge; 
+ 276   1        // display(0x09,0XDF);     //温度单位
+ 277   1      
+ 278   1        //*************
+ 279   1      
+ 280   1        b6 = b5 - 4000;
+ 281   1        x1 = (b2 * (b6 * b6 >> 12)) >> 11;
+ 282   1        x2 = ac2 * b6 >> 11;
+ 283   1        x3 = x1 + x2;
+ 284   1        b3 = (((long)ac1 * 4 + x3) + 2)/4;
+ 285   1        x1 = ac3 * b6 >> 13;
+ 286   1        x2 = (b1 * (b6 * b6 >> 12)) >> 16;
+ 287   1        x3 = ((x1 + x2) + 2) >> 2;
+ 288   1        b4 = (ac4 * (unsigned long) (x3 + 32768)) >> 15;
+ 289   1        b7 = ((unsigned long) up - b3) * (50000 >> OSS);
+ 290   1        if( b7 < 0x80000000)
+ 291   1        p = (b7 * 2) / b4 ;
+ 292   1        else  
+ 293   1        p = (b7 / b4) * 2;
+ 294   1        x1 = (p >> 8) * (p >> 8);
+ 295   1        x1 = (x1 * 3038) >> 16;
+ 296   1        x2 = (-7357 * p) >> 16;
+ 297   1        pressure = p + ((x1 + x2 + 3791) >> 4);
+ 298   1      
+ 299   1        conversion(pressure);
+ 300   1      
+ 301   1        TxDate[0]=shiwan; 
+C51 COMPILER V9.52.0.0   SLAVE_MAIN                                                        05/05/2019 12:53:44 PAGE 6   
+
+ 302   1        TxDate[1]=wan;    
+ 303   1        TxDate[2]=qian; 
+ 304   1        TxDate[3]=bai; 
+ 305   1        TxDate[4]=shi; 
+ 306   1      }
+ 307          
+ 308          
+ 309          
+ 310          /*********************主函数*************************/
+ 311          
+ 312          void main()
+ 313          {
+ 314   1        NRF24L01Int();
+ 315   1        Init_BMP085();                //初始化BMP085 
+ 316   1      
+ 317   1        while(1)
+ 318   1        {
+ 319   2          bmp085Convert();
+ 320   2      //    TxDate[0]='1'; 
+ 321   2      //    TxDate[1]='1';    
+ 322   2      //    TxDate[2]='0'; 
+ 323   2      //    TxDate[3]='1'; 
+ 324   2      //    TxDate[4]='1'; 
+ 325   2      
+ 326   2          NRFSetTxMode(TxDate);
+ 327   2          while(CheckACK());  //检测是否发送完毕
+ 328   2        }
+ 329   1      }
+ 330          
+ 331          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1536    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     36      49
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  2 WARNING(S),  0 ERROR(S)

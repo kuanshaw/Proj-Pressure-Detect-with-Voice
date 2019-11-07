@@ -1,0 +1,7 @@
+"NRF24L01.obj",
+"DELAY.obj",
+"MAX232.obj",
+"LCD1602.obj",
+"master_main.obj" 
+TO "master" 
+RAMSIZE(256) 

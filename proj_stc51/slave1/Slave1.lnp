@@ -1,0 +1,5 @@
+"NRF24L01.obj",
+"Delay.obj",
+"slave_main.obj" 
+TO "Slave1" 
+RAMSIZE(256) 

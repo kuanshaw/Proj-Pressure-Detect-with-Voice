@@ -1,0 +1,42 @@
+C51 COMPILER V9.52.0.0   DELAY                                                             05/05/2019 13:19:41 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE DELAY
+OBJECT MODULE PLACED IN DELAY.OBJ
+COMPILER INVOKED BY: C:\Keil_v4\C51\BIN\C51.EXE DELAY.c BROWSE INCDIR(..\NRF24L01多节点接收) DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include"reg52.h"
+   2          #include"Allhead.h"
+   3          
+   4          /***************************延时函数*********************/
+   5          void LCDDelay(unchar t)
+   6          {
+   7   1        unchar x,y;
+   8   1        for(x=t;x>0;x--)
+   9   1          for(y=110;y>0;y--);
+  10   1      }
+  11          
+  12          
+  13          /**********************延时函数**************************/
+  14          void NRFDelay(unint t)
+  15          {
+  16   1         unint x,y;
+  17   1         for(x=t;x>0;x--)
+  18   1          for(y=110;y>0;y--);
+  19   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     44    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

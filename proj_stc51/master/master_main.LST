@@ -1,0 +1,306 @@
+C51 COMPILER V9.52.0.0   MASTER_MAIN                                                       05/05/2019 13:19:42 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE MASTER_MAIN
+OBJECT MODULE PLACED IN master_main.OBJ
+COMPILER INVOKED BY: C:\Keil_v4\C51\BIN\C51.EXE master_main.c BROWSE INCDIR(..\NRF24L01多节点接收) DEBUG OBJECTEXTEND TA
+                    -BS(2)
+
+line level    source
+
+   1          #include "reg52.h"
+   2          #include "Allhead.h"
+   3          #include "intrins.h"
+   4          
+   5          sbit K1 = P3^2;           //菜单
+   6          sbit K2 = P3^3;           //加
+   7          sbit K3 = P3^4;           //减
+   8          sbit AUDIO_BUSY = P3^5;   //读取语音模块的BUSY引脚，检测是否正在播放
+   9          
+  10          unchar yemian=0;
+  11          unchar num=0;
+  12          unchar flag=0,a,b,c;
+  13          unchar SJqiya1,SJqiya2;         //实际中所测的气压
+  14          unchar gaoya = PRESSURE_H, diya = PRESSURE_L;   //gaoya代表气压上限，diya代表气压下限。
+  15          
+  16          // 用于LCD显示
+  17          unchar lcdgaoya[5],lcddiya[5];
+  18          
+  19          // 语音播放指令列表
+  20          unchar audio_left_low[]             = {0xAA, 0x07, 0x02, 0x00, 0x01, 0xB4, 0xFF};
+  21          unchar audio_left_high[]            = {0xAA, 0x07, 0x02, 0x00, 0x02, 0xB5, 0xFF};
+  22          unchar audio_right_low[]            = {0xAA, 0x07, 0x02, 0x00, 0x03, 0xB6, 0xFF};
+  23          unchar audio_right_high[]           = {0xAA, 0x07, 0x02, 0x00, 0x04, 0xB7, 0xFF};
+  24          unchar audio_left_low_right_low[]   = {0xAA, 0x07, 0x02, 0x00, 0x05, 0xB8, 0xFF};
+  25          unchar audio_left_high_right_high[] = {0xAA, 0x07, 0x02, 0x00, 0x06, 0xB9, 0xFF};
+  26          unchar audio_left_high_right_low[]  = {0xAA, 0x07, 0x02, 0x00, 0x07, 0xBA, 0xFF};
+  27          unchar audio_left_low_right_high[]  = {0xAA, 0x07, 0x02, 0x00, 0x08, 0xBB, 0xFF};
+  28          
+  29          void display_gaoya() ;
+  30          void display_diya();
+  31          void key_table_scan();
+  32          void key_set_range() ;
+  33          void baojin();
+  34          
+  35          
+  36          void display_gaoya()   //气压显示  上限
+  37          {
+  38   1        lcdgaoya[0]=gaoya/100+'0';
+  39   1        lcdgaoya[1]=gaoya%100/10+'0';
+  40   1        lcdgaoya[2]=gaoya%100%10+'0'; 
+  41   1      }
+  42          
+  43          
+  44          void display_diya()   //气压显示  下限
+  45          {
+  46   1        lcddiya[0]=diya/100+'0';
+  47   1        lcddiya[1]=diya%100/10+'0';
+  48   1        lcddiya[2]=diya%100%10+'0'; 
+  49   1      }
+  50          
+  51          void key_table_scan() //按键程序 选择菜单模式
+  52          {
+  53   1        if(!K1)
+  54   1        {  
+C51 COMPILER V9.52.0.0   MASTER_MAIN                                                       05/05/2019 13:19:42 PAGE 2   
+
+  55   2          NRFDelay(50);
+  56   2          if(!K1)
+  57   2          {   
+  58   3            while(!K1)
+  59   3              ; 
+  60   3            yemian++;
+  61   3            if(yemian>=3) { yemian=0; } 
+  62   3          }
+  63   2        }
+  64   1      }
+  65          
+  66          
+  67          void key_set_range()  //对里面的数值进行修改
+  68          {
+  69   1        if(!K2)
+  70   1        {   
+  71   2          NRFDelay(80);
+  72   2          if(!K2)
+  73   2          { 
+  74   3            if(yemian==1)
+  75   3            {           
+  76   4              gaoya+=1;
+  77   4              if(gaoya>250) 
+  78   4              { 
+  79   5                gaoya=250; 
+  80   5              } 
+  81   4              display_gaoya(); 
+  82   4              LcdShow(1,4,lcdgaoya);
+  83   4            }
+  84   3      
+  85   3            if(yemian==2)
+  86   3            {
+  87   4              diya+=1;
+  88   4              if(diya>250) 
+  89   4              { 
+  90   5                diya=250; 
+  91   5              }
+  92   4              display_diya(); //显示
+  93   4              LcdShow(1,4,lcddiya);
+  94   4            }
+  95   3          }
+  96   2        }
+  97   1      
+  98   1        if(!K3)
+  99   1        {  
+ 100   2          NRFDelay(80);
+ 101   2          if(!K3)
+ 102   2          {  
+ 103   3            if(yemian==1)
+ 104   3            {
+ 105   4              gaoya-=1;
+ 106   4              if(gaoya<=1) { gaoya=1; }   
+ 107   4              display_gaoya(); //
+ 108   4              LcdShow(1,4,lcdgaoya);
+ 109   4            }
+ 110   3      
+ 111   3            if(yemian==2)
+ 112   3            {
+ 113   4              diya-=1;
+ 114   4              if(diya<=1) { diya=1; } 
+ 115   4              display_diya(); //显示
+ 116   4              LcdShow(1,4,lcddiya);
+C51 COMPILER V9.52.0.0   MASTER_MAIN                                                       05/05/2019 13:19:42 PAGE 3   
+
+ 117   4            }
+ 118   3          } 
+ 119   2        }
+ 120   1      }
+ 121          
+ 122          
+ 123          unchar audio_state = 0x00, audio_flag = 0;
+ 124          unchar delay_counter = 0;
+ 125          void baojin() 
+ 126          {
+ 127   1        // 语音模块正在播放中
+ 128   1        if(AUDIO_BUSY){
+ 129   2          NRFDelay(50);
+ 130   2          if(AUDIO_BUSY){
+ 131   3            NRFDelay(50);
+ 132   3            if(AUDIO_BUSY){
+ 133   4              return;
+ 134   4            }
+ 135   3          }
+ 136   2        }
+ 137   1        
+ 138   1        // 接受数组已经被清空
+ 139   1        if((RevTempDate0[0] == '-') || (RevTempDate1[0] == '-')) {
+ 140   2          return;
+ 141   2        }
+ 142   1        
+ 143   1        // 开始计算
+ 144   1        a=RevTempDate0[0]-48;
+ 145   1        b=RevTempDate0[1]-48;
+ 146   1        c=RevTempDate0[2]-48;
+ 147   1        SJqiya1=a*100+b*10+c;   //所测的实际气压1
+ 148   1      
+ 149   1        a=RevTempDate1[0]-48;
+ 150   1        b=RevTempDate1[1]-48;
+ 151   1        c=RevTempDate1[2]-48;
+ 152   1        SJqiya2=a*100+b*10+c;   //所测的实际气压2
+ 153   1        
+ 154   1        // 读取左右胎压状态
+ 155   1        audio_state = 0x00;
+ 156   1        if( SJqiya1 >= gaoya ){
+ 157   2          audio_state |= 0x01;
+ 158   2        }
+ 159   1        else if( SJqiya1 < diya ){
+ 160   2          audio_state |= 0x02;
+ 161   2        }
+ 162   1        if( SJqiya2 >= gaoya ){
+ 163   2          audio_state |= 0x04;
+ 164   2        }
+ 165   1        else if( SJqiya2 < diya ){
+ 166   2          audio_state |= 0x08;
+ 167   2        }
+ 168   1        
+ 169   1        // 命令发送延迟，延迟时间在宏定义中设置
+ 170   1        if(audio_state != 0x00){
+ 171   2          delay_counter++;
+ 172   2          if(delay_counter >= AUDIO_DELAY_TIME){
+ 173   3            delay_counter = 0;
+ 174   3            audio_flag = 1;
+ 175   3          }
+ 176   2        }
+ 177   1        
+ 178   1        // Max232SendChar(audio_state);  /* 调试用 */
+C51 COMPILER V9.52.0.0   MASTER_MAIN                                                       05/05/2019 13:19:42 PAGE 4   
+
+ 179   1        
+ 180   1        // 发送语音播放指令
+ 181   1        if(audio_flag){
+ 182   2          audio_flag = 0;
+ 183   2          
+ 184   2          switch(audio_state){
+ 185   3            case 0x01:
+ 186   3              Max232SendAChar(audio_left_high);
+ 187   3              break;
+ 188   3            case 0x02:
+ 189   3              Max232SendAChar(audio_left_low);
+ 190   3              break;
+ 191   3            case 0x04:
+ 192   3              Max232SendAChar(audio_right_high);
+ 193   3              break;
+ 194   3            case 0x08:
+ 195   3              Max232SendAChar(audio_right_low);
+ 196   3              break;
+ 197   3            case 0x05:
+ 198   3              Max232SendAChar(audio_left_high_right_high);
+ 199   3              break;
+ 200   3            case 0x0A:
+ 201   3              Max232SendAChar(audio_left_low_right_low);
+ 202   3              break;
+ 203   3            case 0x09:  
+ 204   3              Max232SendAChar(audio_left_high_right_low);
+ 205   3              break;
+ 206   3            case 0x06:  
+ 207   3              Max232SendAChar(audio_left_low_right_high);
+ 208   3              break;
+ 209   3            default:
+ 210   3              break;
+ 211   3          }
+ 212   2        }
+ 213   1      }
+ 214          
+ 215          
+ 216          /************************主函数********************/
+ 217          void main()
+ 218          {
+ 219   1        LCDInt();
+ 220   1      
+ 221   1        Max232Int();    //串口初始化
+ 222   1        
+ 223   1        LcdShow(0,2,"    Welcome    ");
+ 224   1        NRFDelay(1000);//短暂延时
+ 225   1        LcdShow(1,2,"   (Kpa)    ");
+ 226   1        NRFDelay(1000);
+ 227   1        
+ 228   1        NRF24L01Int();
+ 229   1      
+ 230   1        while(1)
+ 231   1        {
+ 232   2          key_table_scan();
+ 233   2          
+ 234   2          if(yemian==0)  
+ 235   2          {
+ 236   3            if(flag==0)
+ 237   3             {
+ 238   4                flag=1;
+ 239   4                LCDInt();
+ 240   4                LcdShow(0,0," Left    Right  ");
+C51 COMPILER V9.52.0.0   MASTER_MAIN                                                       05/05/2019 13:19:42 PAGE 5   
+
+ 241   4             }
+ 242   3            NRFSetRXMode();//设置为接收模式
+ 243   3            GetDate();
+ 244   3            baojin();
+ 245   3          }
+ 246   2          else if(yemian==1)  //进入设置模式
+ 247   2          {
+ 248   3            if(flag==1)
+ 249   3            {
+ 250   4              flag=2;
+ 251   4              LCDInt();
+ 252   4              LcdShow(0,3,"   Pressure_H  ");
+ 253   4              LcdShow(2,2,"     .00Kpa");
+ 254   4              display_gaoya(); //气压显示
+ 255   4              LcdShow(1,4,lcdgaoya);
+ 256   4            }
+ 257   3            key_set_range();
+ 258   3          }
+ 259   2          else if(yemian==2)  //进入设置模式
+ 260   2          { 
+ 261   3            if(flag==2)
+ 262   3            {
+ 263   4              flag=0;
+ 264   4              LCDInt();
+ 265   4              LcdShow(0,3,"   Pressure_L  ");
+ 266   4              LcdShow(2,2,"     .00Kpa");
+ 267   4              display_diya(); //气压显示
+ 268   4              LcdShow(1,4,lcddiya);
+ 269   4            }
+ 270   3            key_set_range();
+ 271   3          }
+ 272   2        }
+ 273   1      }
+ 274          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    792    ----
+   CONSTANT SIZE    =     90    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     79    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
